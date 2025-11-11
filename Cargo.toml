@@ -1,0 +1,23 @@
+[package]
+name = "ini_parser"
+version = "0.1.0"
+edition = "2024"
+authors = ["Gladun Ostap hladun.ostap@gmail.com>"]
+description = "INI file parser library and CLI, built with pest."
+repository = "https://github.com/OstapGladun/ini_parser"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = "4.5.51"
+pest = "2.8.3"
+pest_derive = "2.8.3"
+thiserror = "2.0.17"
+
+[lib]
+name = "ini_parser"
+path = "src/lib.rs"
+
+[[bin]]
+name = "inip"
+path = "src/main.rs"

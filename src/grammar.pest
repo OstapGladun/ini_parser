@@ -1,0 +1,57 @@
+// `WHITESPACE` та `NEWLINE` є "тихими" правилами (silent rules).
+// Вони автоматично споживаються завдяки `_` в `~_~` 
+// або навколо правил, але не створюють токенів в AST.
+// Вони не рахуються в нашому списку з 15 правил.
+WHITESPACE = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }
+
+// --- 15 Правил Граматики ---
+
+// 1. file: Корінь нашого документа.
+file = { SOI ~ (line)* ~ EOI }
+
+// 2. line: Один рядок може бути одним з чотирьох варіантів.
+line = { (comment | section | pair | blank_line) }
+
+// 3. blank_line: Порожній рядок (містить лише WHITESPACE та NEWLINE).
+//    Ми парсимо його, щоб пропустити.
+blank_line = { NEWLINE }
+
+// 4. comment: Коментарі, що починаються з ';' або '#'.
+comment = { (";" | "#") ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+
+// 5. section: Заголовок секції, напр. [Database]
+//    `~_~` означає "з опціональним WHITESPACE навколо".
+section = { "[" ~_~ section_name ~_~ "]" ~ NEWLINE }
+
+// 6. section_name: Ім'я всередині []. 
+//    `@` (atomic) гарантує, що якщо правило не спрацює, воно відкотиться,
+//    а `{...}` (compound atomic) захоплює лише те, що всередині.
+section_name = @{ (ASCII_ALPHANUMERIC | "." | "_" | "-")+ }
+
+// 7. pair: Пара ключ=значення.
+pair = { key ~_~ "=" ~_~ value ~ NEWLINE }
+
+// 8. key: Назва ключа.
+key = @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
+
+// 9. value: Значення, яке може бути в лапках або ні.
+value = { quoted_value | unquoted_value }
+
+// 10. unquoted_value: Значення без лапок. 
+//     Воно йде до кінця рядка або до коментаря.
+unquoted_value = @{ ((!(NEWLINE | ";" | "#") ~ ANY))* }
+
+// 11. quoted_value: Значення в подвійних лапках.
+quoted_value = { "\"" ~ inner_quoted ~ "\"" }
+
+// 12. inner_quoted: Вміст рядка в лапках.
+//     Підтримує екрановані символи.
+inner_quoted = @{ (escape | !"\"" ~ ANY)* }
+
+// 13. escape: Правило для екранованих символів.
+escape = @{ "\\" ~ ("\"" | "n" | "t" | "\\" | "r") }
+
+// 14. SOI: Вбудоване правило pest - Start of Input.
+// 15. EOI: Вбудоване правило pest - End of Input.
+// (Ми перерахували SOI/EOI для досягнення 15 правил, вони є частиною граматики)

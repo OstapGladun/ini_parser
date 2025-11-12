@@ -1,5 +1,5 @@
 [package]
-name = "ini_parser"
+name = "ini_parser_gladun"
 version = "0.1.0"
 edition = "2024"
 authors = ["Gladun Ostap hladun.ostap@gmail.com>"]

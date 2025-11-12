@@ -49,6 +49,7 @@ fn main() -> Result<()> {
         Commands::Credits => {
             println!("INI Parser v0.1.0");
             println!("Створено за допомогою Rust та pest.");
+            println!("Автор: Ostap Gladun (hladun.ostap@gmail.com)");
         }
     }
 

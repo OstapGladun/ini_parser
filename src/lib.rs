@@ -1,12 +1,12 @@
-use pest::Parser;
 use pest::iterators::Pair;
+use pest::Parser;
 use std::collections::HashMap;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum IniError {
     #[error("Помилка парсингу: {0}")]
-    ParseError(#[from] pest::error::Error<Rule>),
+    ParseError(#[from] Box<pest::error::Error<Rule>>),
     #[error("Помилка читання файлу: {0}")]
     IoError(#[from] std::io::Error),
     #[error("Внутрішня помилка: невірне правило {0:?}")]
@@ -40,7 +40,8 @@ pub type IniData = HashMap<String, HashMap<String, IniValue>>;
 
 /// Парсить вхідний рядок INI у структурований `IniData`.
 pub fn parse_ini(input: &str) -> Result<IniData, IniError> {
-    let file_pair = IniParser::parse(Rule::file, input)?
+    let file_pair = IniParser::parse(Rule::file, input)
+        .map_err(Box::new)?
         .next()
         .ok_or(IniError::InvalidRule(Rule::file))?;
 
@@ -52,7 +53,7 @@ pub fn parse_ini(input: &str) -> Result<IniData, IniError> {
         match pair.as_rule() {
             Rule::line => {
                 let line_content = pair.into_inner().next();
-
+                
                 if let Some(line_pair) = line_content {
                     match line_pair.as_rule() {
                         Rule::section => {
@@ -62,20 +63,19 @@ pub fn parse_ini(input: &str) -> Result<IniData, IniError> {
                                 .ok_or(IniError::InvalidRule(Rule::section))?
                                 .as_str()
                                 .to_string();
-
+                            
                             data.entry(current_section_name.clone()).or_default();
                         }
                         Rule::pair => {
                             let mut inner = line_pair.into_inner();
 
-                            let key = inner
-                                .next()
+                            let key = inner.next()
                                 .ok_or(IniError::InvalidRule(Rule::pair))?
                                 .as_str()
                                 .to_string();
 
-                            let value_pair =
-                                inner.next().ok_or(IniError::InvalidRule(Rule::pair))?;
+                            let value_pair = inner.next()
+                                .ok_or(IniError::InvalidRule(Rule::pair))?;
 
                             let value = parse_value_pair(value_pair)?;
 
@@ -90,11 +90,11 @@ pub fn parse_ini(input: &str) -> Result<IniData, IniError> {
                 }
             }
             Rule::EOI => (),
-
+            
             _ => return Err(IniError::InvalidRule(pair.as_rule())),
         }
     }
-
+    
     Ok(data)
 }
 
@@ -127,12 +127,14 @@ fn parse_value_pair(value_pair: Pair<Rule>) -> Result<IniValue, IniError> {
                             return Err(IniError::ValueParseError(format!(
                                 "Invalid boolean: {}",
                                 inner_str
-                            )));
+                            )))
                         }
                     };
                     Ok(IniValue::Boolean(bool_val))
                 }
-                Rule::string_simple => Ok(IniValue::String(inner_str.trim().to_string())),
+                Rule::string_simple => {
+                    Ok(IniValue::String(inner_str.trim().to_string()))
+                }
                 _ => Err(IniError::InvalidRule(inner_value.as_rule())),
             }
         }

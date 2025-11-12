@@ -1,22 +1,51 @@
-NEWLINE = _{ "\r\n" | "\n" | "\r" }
-WHITESPACE = _{ " " | "\t" }
+//- Головне правило, представляє весь файл. Починається з SOI і закінчується EOI.
+file = { SOI ~ line* ~ EOI }
 
-LINE_COMMENT = _{ (";" | "#") ~ (!NEWLINE ~ ANY)* }
-INLINE_COMMENT = _{ (";" | "#") ~ (!NEWLINE ~ ANY)* }
+//- Представляє один рядок у файлі, який може бути секцією, парою, коментарем або новим рядком.
+line = { (section | pair | LINE_COMMENT | NEWLINE) }
 
-string_quoted = @{ "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\"" }
-boolean = @{ "true" | "false" | "yes" | "no" }
-number = @{ ("-" | "+")? ~ (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?) }
-
-string_simple = @{ !("\"") ~ (!(";" | "#" | NEWLINE) ~ ANY)+ }
-
-value = { string_quoted | boolean | number | string_simple }
-
-identifier = @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
-dotted_identifier = @{ identifier ~ ("." ~ identifier)* }
-
-pair = { dotted_identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value ~ (WHITESPACE* ~ INLINE_COMMENT)? }
+//- Правило для секції у форматі `[section.name]`. Використовує `dotted_identifier`.
 section = { "[" ~ dotted_identifier ~ "]" }
 
-line = { (section | pair | LINE_COMMENT | NEWLINE) }
-file = { SOI ~ line* ~ EOI }
+//- Правило для пари ключ-значення у форматі `key = value`.
+//- Підтримує пробіли навколо `=` та опціональний вбудований коментар в кінці.
+pair = { dotted_identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value ~ (WHITESPACE* ~ INLINE_COMMENT)? }
+
+// --- Ідентифікатори ---
+
+//- Ідентифікатор, що підтримує крапки, напр. `database.host`.
+dotted_identifier = @{ identifier ~ ("." ~ identifier)* }
+
+//- Базовий ідентифікатор для ключів та секцій. Дозволяє літери, цифри, `_` та `-`.
+identifier = @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
+
+// --- Значення (Values) ---
+
+//- Одне з можливих типізованих значень.
+value = { string_quoted | boolean | number | string_simple }
+
+//- Рядок у подвійних лапках, напр. `"Hello World"`.
+string_quoted = @{ "\"" ~ (!("\"" | NEWLINE) ~ ANY)* ~ "\"" }
+
+//- Булеве значення: `true`, `false`, `yes`, або `no`.
+boolean = @{ "true" | "false" | "yes" | "no" }
+
+//- Числове значення, ціле або з комою, з опціональним знаком.
+number = @{ ("-" | "+")? ~ (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?) }
+
+//- Простий рядок (все до коментаря або нового рядка). Не повинен починатися з `"`
+string_simple = @{ !("\"") ~ (!(";" | "#" | NEWLINE) ~ ANY)+ }
+
+// --- Тихі правила (Ignored) ---
+
+//- Коментар на весь рядок, що починається з `;` або `#`.
+LINE_COMMENT = _{ (";" | "#") ~ (!NEWLINE ~ ANY)* }
+
+//- Вбудований коментар (після `pair`), що починається з `;` або `#`.
+INLINE_COMMENT = _{ (";" | "#") ~ (!NEWLINE ~ ANY)* }
+
+//- Символ нового рядка (CRLF, LF, CR).
+NEWLINE = _{ "\r\n" | "\n" | "\r" }
+
+//- Пробіл або таб.
+WHITESPACE = _{ " " | "\t" }
